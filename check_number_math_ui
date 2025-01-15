@@ -1,0 +1,151 @@
+/*
+Plugin Name: Check Number Plugin with Math Verification (Enhanced UI)
+Description: Plugin untuk mengecek nomor dengan API Check Number dan verifikasi soal matematika, dengan UI yang menarik.
+Version: 1.7
+Author: Novian Bayu Putranto
+*/
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly.
+}
+
+function generate_math_question() {
+    $num1 = rand(1, 10);
+    $num2 = rand(1, 10);
+    $answer = $num1 + $num2;
+    $transient_key = 'math_answer_' . uniqid();
+
+    // Simpan jawaban sebagai string untuk menghindari masalah casting
+    set_transient($transient_key, (string)$answer, 900); // 15 menit
+
+    return [
+        'question' => "Berapa hasil dari $num1 + $num2?",
+        'transient_key' => $transient_key
+    ];
+}
+
+function check_number_with_math_verification_shortcode() {
+    $math_data = generate_math_question();
+    $math_question = $math_data['question'];
+    $transient_key = $math_data['transient_key'];
+
+    ob_start();
+    ?>
+    <div id="check-number-widget">
+        <form method="post" id="check-number-form">
+            <div class="form-group">
+                <label for="number">Masukkan Nomor:</label>
+                <input type="text" id="number" name="number" placeholder="Masukkan nomor (cth: 6281234567890)" required>
+            </div>
+            <div class="form-group">
+                <label for="math-verification"><?php echo esc_html($math_question); ?></label>
+                <input type="hidden" name="math_transient_key" value="<?php echo esc_attr($transient_key); ?>">
+                <input type="text" id="math-verification" name="math_verification" placeholder="Masukkan jawaban" required>
+            </div>
+            <button type="submit" id="submit-button">Cek Nomor</button>
+        </form>
+        <div id="check-number-result">
+            <?php
+            if ($_POST) {
+                $number = sanitize_text_field($_POST['number']);
+                $math_verification = sanitize_text_field($_POST['math_verification']);
+                $transient_key = sanitize_text_field($_POST['math_transient_key']);
+                $api_key = 'ofU7SY402FsHyoBG1HqfaV3Nxxxxxxxx';
+                $sender = '44745xxxxxxx';
+
+                // Ambil jawaban yang benar dari transient
+                $correct_answer = get_transient($transient_key);
+
+                if ($correct_answer === false) {
+                    echo '<div class="result-message error">Soal telah kedaluwarsa. Silakan muat ulang halaman.</div>';
+                } elseif ((string)$math_verification !== $correct_answer) {
+                    echo '<div class="result-message error">Jawaban hitungan salah. Silakan coba lagi.</div>';
+                } else {
+                    $api_url = "https://lunardev.aircode.eu.org/check-number?api_key=$api_key&sender=$sender&number=$number";
+                    $api_response = wp_remote_get($api_url);
+
+                    if (is_wp_error($api_response)) {
+                        echo '<div class="result-message error">Error: ' . esc_html($api_response->get_error_message()) . '</div>';
+                    } else {
+                        $body = wp_remote_retrieve_body($api_response);
+                        $data = json_decode($body, true);
+
+                        if ($data && isset($data['status']) && $data['status'] == 1) {
+                            $exists = $data['msg']['exists'];
+                            if ($exists) {
+                                echo '<div class="result-message success">Selamat, nomor <strong>' . esc_html($number) . '</strong> terdaftar di WhatsApp!</div>';
+                            } else {
+                                echo '<div class="result-message warning">Nomor <strong>' . esc_html($number) . '</strong> tidak terdaftar di WhatsApp.</div>';
+                            }
+                        } else {
+                            echo '<div class="result-message error">Nomor <strong>' . esc_html($number) . '</strong> tidak terdaftar di WhatsApp.</div>';
+                        }
+                    }
+                }
+            }
+            ?>
+        </div>
+    </div>
+    <style>
+        #check-number-widget {
+            max-width: 400px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+        }
+        #check-number-form {
+            background: #f5faff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #check-number-form .form-group {
+            margin-bottom: 15px;
+        }
+        #check-number-form label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        #check-number-form input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dcdcdc;
+            border-radius: 4px;
+        }
+        #submit-button {
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #submit-button:hover {
+            background-color: #45a049;
+        }
+        .result-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .result-message.success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .result-message.warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+        .result-message.error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('check_number_math_ui', 'check_number_with_math_verification_shortcode');
