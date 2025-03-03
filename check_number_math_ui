@@ -50,8 +50,10 @@ function check_number_with_math_verification_shortcode() {
                 $number = sanitize_text_field($_POST['number']);
                 $math_verification = sanitize_text_field($_POST['math_verification']);
                 $transient_key = sanitize_text_field($_POST['math_transient_key']);
-                $api_key = 'ofU7SY402FsHyoBG1HqfaV3Nxxxxxxxx';
-                $sender = '44745xxxxxxx';
+
+//ubah nilai api_key dan sender
+                $api_key = 'CSsuW6Yxxxxxxxxxxxx'; // Pastikan ini valid
+                $sender = '62xxxxxxxx'; // Pastikan ini valid
 
                 // Ambil jawaban yang benar dari transient
                 $correct_answer = get_transient($transient_key);
@@ -61,7 +63,8 @@ function check_number_with_math_verification_shortcode() {
                 } elseif ((string)$math_verification !== $correct_answer) {
                     echo '<div class="result-message error">Jawaban hitungan salah. Silakan coba lagi.</div>';
                 } else {
-                    $api_url = "https://lunardev.aircode.eu.org/check-number?api_key=$api_key&sender=$sender&number=$number";
+//Ubah nama domain
+                    $api_url = "https://domain.com/check-number?api_key=$api_key&sender=$sender&number=$number";
                     $api_response = wp_remote_get($api_url);
 
                     if (is_wp_error($api_response)) {
