@@ -24,6 +24,21 @@ function generate_math_question() {
     ];
 }
 
+function format_phone_number($number) {
+    // Hapus semua karakter yang bukan angka
+    $number = preg_replace('/\D/', '', $number);
+
+    // Cek jika nomor diawali dengan 0, ganti dengan 62
+    if (substr($number, 0, 1) === '0') {
+        $number = '62' . substr($number, 1);
+    } elseif (substr($number, 0, 2) === '62') {
+        // Jika sudah dalam format 62, tidak perlu diubah
+        $number = $number;
+    }
+
+    return $number;
+}
+
 function check_number_with_math_verification_shortcode() {
     $math_data = generate_math_question();
     $math_question = $math_data['question'];
@@ -50,10 +65,11 @@ function check_number_with_math_verification_shortcode() {
                 $number = sanitize_text_field($_POST['number']);
                 $math_verification = sanitize_text_field($_POST['math_verification']);
                 $transient_key = sanitize_text_field($_POST['math_transient_key']);
+                $api_key = 'CSsuW6YPCaUa7mxxxxxxxxxxl'; // Pastikan ini valid
+                $sender = '4xxxxxx267'; // Pastikan ini valid
 
-//ubah nilai api_key dan sender
-                $api_key = 'CSsuW6Yxxxxxxxxxxxx'; // Pastikan ini valid
-                $sender = '62xxxxxxxx'; // Pastikan ini valid
+                // Format nomor telepon
+                $formatted_number = format_phone_number($number);
 
                 // Ambil jawaban yang benar dari transient
                 $correct_answer = get_transient($transient_key);
@@ -63,8 +79,7 @@ function check_number_with_math_verification_shortcode() {
                 } elseif ((string)$math_verification !== $correct_answer) {
                     echo '<div class="result-message error">Jawaban hitungan salah. Silakan coba lagi.</div>';
                 } else {
-//Ubah nama domain
-                    $api_url = "https://domain.com/check-number?api_key=$api_key&sender=$sender&number=$number";
+                    $api_url = "https://lunardev.aircode.eu.org/check-number?api_key=$api_key&sender=$sender&number=$formatted_number";
                     $api_response = wp_remote_get($api_url);
 
                     if (is_wp_error($api_response)) {
@@ -76,12 +91,12 @@ function check_number_with_math_verification_shortcode() {
                         if ($data && isset($data['status']) && $data['status'] == 1) {
                             $exists = $data['msg']['exists'];
                             if ($exists) {
-                                echo '<div class="result-message success">Selamat, nomor <strong>' . esc_html($number) . '</strong> terdaftar di WhatsApp!</div>';
+                                echo '<div class="result-message success">Selamat, nomor <strong>' . esc_html($formatted_number) . '</strong> terdaftar di WhatsApp!</div>';
                             } else {
-                                echo '<div class="result-message warning">Nomor <strong>' . esc_html($number) . '</strong> tidak terdaftar di WhatsApp.</div>';
+                                echo '<div class="result-message warning">Nomor <strong>' . esc_html($formatted_number) . '</strong> tidak terdaftar di WhatsApp.</div>';
                             }
                         } else {
-                            echo '<div class="result-message error">Nomor <strong>' . esc_html($number) . '</strong> tidak terdaftar di WhatsApp.</div>';
+                            echo '<div class="result-message error">Nomor <strong>' . esc_html($formatted_number) . '</strong> tidak terdaftar di WhatsApp.</div>';
                         }
                     }
                 }
